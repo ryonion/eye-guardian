@@ -28,7 +28,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ahk-x64
+          name: eyes-guardian-x64
           path: build/EyesGuardian-x64.exe
 
       - name: Upload to GitHub Release
