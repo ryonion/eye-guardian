@@ -17,12 +17,7 @@ jobs:
       - name: Install AutoHotkey
         shell: pwsh
         run: |
-          $version = "2.0.21"
-          $installerUrl = "https://github.com/AutoHotkey/AutoHotkey/releases/download/v$version/AutoHotkey_$version`_setup.exe"
-          $installerPath = Join-Path $env:RUNNER_TEMP "AutoHotkey_setup.exe"
-
-          Invoke-WebRequest -Uri $installerUrl -OutFile $installerPath
-          Start-Process -FilePath $installerPath -ArgumentList "/silent" -Wait
+          choco install autohotkey.install --yes --params "'/DefaultVer:U64'"
 
       - name: Compile script
         shell: pwsh
@@ -30,7 +25,8 @@ jobs:
           $searchRoots = @(
             (Join-Path $env:ProgramFiles "AutoHotkey"),
             (Join-Path ${env:ProgramFiles(x86)} "AutoHotkey"),
-            (Join-Path $env:LOCALAPPDATA "Programs\AutoHotkey")
+            (Join-Path $env:LOCALAPPDATA "Programs\AutoHotkey"),
+            "C:\ProgramData\chocolatey\lib"
           ) | Where-Object { $_ -and (Test-Path $_) }
 
           $compiler = $null
