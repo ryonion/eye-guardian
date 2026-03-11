@@ -10,29 +10,34 @@ jobs:
   build:
     runs-on: windows-latest
 
-    strategy:
-      matrix:
-        arch: [x86, x64]
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Install AutoHotkey
+        shell: pwsh
         run: |
-          choco install autohotkey.portable --yes
+          $version = "2.0.21"
+          $zipUrl = "https://www.autohotkey.com/download/2.0/AutoHotkey_$version.zip"
+          $zipPath = Join-Path $env:RUNNER_TEMP "AutoHotkey.zip"
+          $installDir = Join-Path $env:RUNNER_TEMP "AutoHotkey"
+
+          Invoke-WebRequest -Uri $zipUrl -OutFile $zipPath
+          Expand-Archive -Path $zipPath -DestinationPath $installDir -Force
 
       - name: Compile script
         shell: pwsh
         run: |
-          $compiler = "C:\Program Files\AutoHotkey\Compiler\Ahk2Exe.exe"
+          $installDir = Join-Path $env:RUNNER_TEMP "AutoHotkey"
+          $compiler = Get-ChildItem -Path $installDir -Filter Ahk2Exe.exe -Recurse | Select-Object -First 1 -ExpandProperty FullName
+          $base = Get-ChildItem -Path $installDir -Filter AutoHotkey64.exe -Recurse | Select-Object -First 1 -ExpandProperty FullName
+          $out = "EyesGuardian-x64.exe"
 
-          if ("${{ matrix.arch }}" -eq "x64") {
-            $base = "C:\Program Files\AutoHotkey\v2\AutoHotkey64.exe"
-            $out = "main-x64.exe"
-          } else {
-            $base = "C:\Program Files\AutoHotkey\v2\AutoHotkey32.exe"
-            $out = "main-x86.exe"
+          if (-not $compiler) {
+            throw "Ahk2Exe.exe not found under $installDir"
+          }
+          if (-not $base) {
+            throw "AutoHotkey64.exe not found under $installDir"
           }
 
           & $compiler `
@@ -44,11 +49,11 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ahk-${{ matrix.arch }}
-          path: main-*.exe
+          name: ahk-x64
+          path: EyesGuardian-x64.exe
 
       - name: Upload to GitHub Release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
-          files: main-*.exe
+          files: EyesGuardian-x64.exe
