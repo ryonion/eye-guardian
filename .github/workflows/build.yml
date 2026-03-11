@@ -17,16 +17,19 @@ jobs:
       - name: Install AutoHotkey
         shell: pwsh
         run: |
-          choco install autohotkey.install --yes --params "'/DefaultVer:U64'"
+          $version = "2.0.21"
+          $zipUrl = "https://github.com/AutoHotkey/AutoHotkey/releases/download/v$version/AutoHotkey_$version.zip"
+          $zipPath = Join-Path $env:RUNNER_TEMP "AutoHotkey.zip"
+          $installDir = Join-Path $env:RUNNER_TEMP "AutoHotkey"
+
+          Invoke-WebRequest -Uri $zipUrl -OutFile $zipPath
+          Expand-Archive -Path $zipPath -DestinationPath $installDir -Force
 
       - name: Compile script
         shell: pwsh
         run: |
           $searchRoots = @(
-            (Join-Path $env:ProgramFiles "AutoHotkey"),
-            (Join-Path ${env:ProgramFiles(x86)} "AutoHotkey"),
-            (Join-Path $env:LOCALAPPDATA "Programs\AutoHotkey"),
-            "C:\ProgramData\chocolatey\lib"
+            (Join-Path $env:RUNNER_TEMP "AutoHotkey")
           ) | Where-Object { $_ -and (Test-Path $_) }
 
           $compiler = $null
