@@ -18,26 +18,40 @@ jobs:
         shell: pwsh
         run: |
           $version = "2.0.21"
-          $zipUrl = "https://www.autohotkey.com/download/2.0/AutoHotkey_$version.zip"
-          $zipPath = Join-Path $env:RUNNER_TEMP "AutoHotkey.zip"
-          $installDir = Join-Path $env:RUNNER_TEMP "AutoHotkey"
+          $installerUrl = "https://github.com/AutoHotkey/AutoHotkey/releases/download/v$version/AutoHotkey_$version`_setup.exe"
+          $installerPath = Join-Path $env:RUNNER_TEMP "AutoHotkey_setup.exe"
 
-          Invoke-WebRequest -Uri $zipUrl -OutFile $zipPath
-          Expand-Archive -Path $zipPath -DestinationPath $installDir -Force
+          Invoke-WebRequest -Uri $installerUrl -OutFile $installerPath
+          Start-Process -FilePath $installerPath -ArgumentList "/silent" -Wait
 
       - name: Compile script
         shell: pwsh
         run: |
-          $installDir = Join-Path $env:RUNNER_TEMP "AutoHotkey"
-          $compiler = Get-ChildItem -Path $installDir -Filter Ahk2Exe.exe -Recurse | Select-Object -First 1 -ExpandProperty FullName
-          $base = Get-ChildItem -Path $installDir -Filter AutoHotkey64.exe -Recurse | Select-Object -First 1 -ExpandProperty FullName
+          $searchRoots = @(
+            (Join-Path $env:ProgramFiles "AutoHotkey"),
+            (Join-Path ${env:ProgramFiles(x86)} "AutoHotkey"),
+            (Join-Path $env:LOCALAPPDATA "Programs\AutoHotkey")
+          ) | Where-Object { $_ -and (Test-Path $_) }
+
+          $compiler = $null
+          $base = $null
+
+          foreach ($root in $searchRoots) {
+            if (-not $compiler) {
+              $compiler = Get-ChildItem -Path $root -Filter Ahk2Exe.exe -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1 -ExpandProperty FullName
+            }
+            if (-not $base) {
+              $base = Get-ChildItem -Path $root -Filter AutoHotkey64.exe -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1 -ExpandProperty FullName
+            }
+          }
+
           $out = "EyesGuardian-x64.exe"
 
           if (-not $compiler) {
-            throw "Ahk2Exe.exe not found under $installDir"
+            throw "Ahk2Exe.exe not found under: $($searchRoots -join ', ')"
           }
           if (-not $base) {
-            throw "AutoHotkey64.exe not found under $installDir"
+            throw "AutoHotkey64.exe not found under: $($searchRoots -join ', ')"
           }
 
           & $compiler `
