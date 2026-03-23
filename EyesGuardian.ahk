@@ -83,6 +83,8 @@ Init() {
     gState["menu"] := contextMenu
     gState["alertCtrl"] := alertCtrl
 
+    SetupTrayMenu()
+
     mainWin.OnEvent("Close", (*) => ExitApp())
     mainWin.OnEvent("Escape", (*) => ExitApp())
 
@@ -97,6 +99,16 @@ Init() {
 
     SetTimer(UpdateVisualState, 1000)
     UpdateVisualState()
+}
+
+SetupTrayMenu() {
+    tray := A_TrayMenu
+    tray.Delete()
+    tray.Add("Center on Screen", CenterWindowFromTray)
+    tray.Add()
+    tray.Add("Exit", CloseFromMenu)
+    tray.Default := "Center on Screen"
+    tray.ClickCount := 1
 }
 
 LoadSettings() {
@@ -363,6 +375,17 @@ ApplyPinned(hwnd, isPinned) {
 CloseFromMenu(*) {
     HideElapsedTooltip()
     ExitApp()
+}
+
+CenterWindowFromTray(*) {
+    global gState, WIN_W, WIN_H
+    if !gState.Has("gui") {
+        return
+    }
+
+    centered := ResolveStartPosition("", "", WIN_W, WIN_H)
+    gState["gui"].Show("x" centered["x"] " y" centered["y"] " NoActivate")
+    SaveSettings()
 }
 
 ResetCycle() {
